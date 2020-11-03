@@ -5,7 +5,7 @@ const path = require("path");
 const envConfig = require("../env.config.js");
 // 处理工具配置
 const pluginConfig = require("../plugin.config.js")["dev"];
-const appConfig = require(path.resolve(envConfig.rootDir, "yihtml.config.js"));
+
 const del = require("del");
 const gulp = require("gulp");
 const gulpSourcemaps = require("gulp-sourcemaps");
@@ -16,7 +16,7 @@ const autoprefixer = require("autoprefixer");
 const fs = require("fs-extra");
 const download = require("download-git-repo");
 const gulpBabel = require("gulp-babel");
-const gulpImage = require("gulp-image");
+// const gulpImage = require("gulp-image");
 const gulpUglifyEs = require("gulp-uglify-es").default;
 const shell = require("shelljs");
 const commander = require("commander");
@@ -29,8 +29,11 @@ const tempDir = path.resolve(envConfig.rootDir, "temp");
 const initDir = path.resolve(envConfig.rootDir);
 gulpSass.compiler = require("node-sass");
 figlet.parseFont("figletFont", figletFont);
-console.log("appConfig");
-console.log(appConfig);
+const appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.js");
+const appConfig = {};
+if (fs.pathExists(appConfigFilePath) === true) {
+    appConfig = require(appConfigFilePath);
+}
 
 // 添加postCss插件
 // postcssArray.push(stylelint());
@@ -58,17 +61,6 @@ function taskCss() {
         .pipe(gulp.dest(`${envConfig.distDir}/css`));
 }
 
-// 公共css任务
-function taskPublicCss() {
-    return gulp
-        .src(`${envConfig.srcDir}/public/css/*.scss`, pluginConfig.srcParams)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
-        .pipe(gulpSass(pluginConfig.sassParams))
-        .pipe(gulpPostcss(pluginConfig.postcssParams))
-        .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
-        .pipe(gulp.dest(`${envConfig.distDir}/public/css`));
-}
-
 // js任务
 function taskJs() {
     return gulp
@@ -82,10 +74,22 @@ function taskJs() {
 
 // js任务
 function taskImage() {
+    return (
+        gulp
+            .src(`${envConfig.srcDir}/images/**/*`)
+            // .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
+            .pipe(gulp.dest(`${envConfig.distDir}/images`))
+    );
+}
+// 公共css任务
+function taskPublicCss() {
     return gulp
-        .src(`${envConfig.srcDir}/images/**/*`)
-        .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
-        .pipe(gulp.dest(`${envConfig.distDir}/images`));
+        .src(`${envConfig.srcDir}/public/css/*.scss`, pluginConfig.srcParams)
+        .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(gulpSass(pluginConfig.sassParams))
+        .pipe(gulpPostcss(pluginConfig.postcssParams))
+        .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
+        .pipe(gulp.dest(`${envConfig.distDir}/public/css`));
 }
 // 公共js任务
 function taskPublicJs() {
