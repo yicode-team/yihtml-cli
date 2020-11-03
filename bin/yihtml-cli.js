@@ -5,6 +5,7 @@ const path = require("path");
 const envConfig = require("../env.config.js");
 // 处理工具配置
 const pluginConfig = require("../plugin.config.js")["dev"];
+const appConfig = require(path.resolve(envConfig.rootDir, "yihtml.config.js"));
 const del = require("del");
 const gulp = require("gulp");
 const gulpSourcemaps = require("gulp-sourcemaps");
@@ -20,6 +21,7 @@ const gulpUglifyEs = require("gulp-uglify-es").default;
 const shell = require("shelljs");
 const commander = require("commander");
 const browserSync = require("browser-sync").create();
+const px2viewport = require("postcss-px-to-viewport");
 const figlet = require("figlet");
 const pkg = require("../package.json");
 const figletFont = require("../fonts/Epic.js");
@@ -27,11 +29,15 @@ const tempDir = path.resolve(envConfig.rootDir, "temp");
 const initDir = path.resolve(envConfig.rootDir);
 gulpSass.compiler = require("node-sass");
 figlet.parseFont("figletFont", figletFont);
+console.log("appConfig");
+console.log(appConfig);
 
 // 添加postCss插件
 // postcssArray.push(stylelint());
+if (appConfig.mobile === true) {
+    pluginConfig.postcssParams.push(px2viewport(pluginConfig.px2viewport));
+}
 
-// pluginConfig.postcssParams.push(pxtorem(pluginConfig.px2rem));
 pluginConfig.postcssParams.push(autoprefixer());
 // 清除任务
 function taskClean() {
