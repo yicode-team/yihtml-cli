@@ -78,7 +78,7 @@ function taskJs() {
 function taskImage() {
     return gulp
         .src(`${envConfig.srcDir}/images/**/*`)
-        .pipe(gulpImage(pluginConfig.imageParams))
+        .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
         .pipe(gulp.dest(`${envConfig.distDir}/images`));
 }
 // 公共js任务
@@ -99,6 +99,8 @@ function taskStatic(item) {
 async function start() {
     if (process.env.NODE_ENV === "dev") {
         console.log("开发环境启动中");
+    } else {
+        console.log("发布环境资源构建中，包含图片压缩，请耐心等待...");
     }
     gulp.series(
         //
