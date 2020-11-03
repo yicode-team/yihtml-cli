@@ -95,6 +95,15 @@ function taskImage() {
             .pipe(gulp.dest(`${envConfig.distDir}/images`))
     );
 }
+// fonts任务
+function taskFont() {
+    return (
+        gulp
+            .src(`${envConfig.srcDir}/fonts/**/*`)
+            // .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
+            .pipe(gulp.dest(`${envConfig.distDir}/fonts`))
+    );
+}
 // 公共css任务
 function taskPublicCss() {
     return gulp
@@ -115,9 +124,18 @@ function taskPublicJs() {
         .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflifyParams)))
         .pipe(gulp.dest(`${envConfig.distDir}/public/js`));
 }
+// 公共image任务
+function taskPublicImage() {
+    return (
+        gulp
+            .src(`${envConfig.srcDir}/public/images/**/*`)
+            // .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
+            .pipe(gulp.dest(`${envConfig.distDir}/public/images`))
+    );
+}
 
 // 复制static静态文件
-function taskStatic(item) {
+function taskStatic() {
     return gulp.src(`${envConfig.srcDir}/static/**/*`, pluginConfig.srcParams).pipe(gulp.dest(`${envConfig.distDir}/static`));
 }
 async function start() {
@@ -141,10 +159,12 @@ async function start() {
             //
             taskHtml,
             taskCss,
-            taskPublicCss,
             taskJs,
             taskImage,
+            taskFont,
+            taskPublicCss,
             taskPublicJs,
+            taskPublicImage,
             taskStatic
         ),
         function () {
@@ -309,6 +329,18 @@ commander.program
             browserSync.reload();
             cb();
         });
+        gulp.watch(path.normalize(`${envConfig.srcDir}/images/**/*`).replace(/\\/gm, "/"), function (cb) {
+            console.log("页面images文件已处理");
+            gulp.series(taskImage)();
+            browserSync.reload();
+            cb();
+        });
+        gulp.watch(path.normalize(`${envConfig.srcDir}/fonts/**/*`).replace(/\\/gm, "/"), function (cb) {
+            console.log("fonts文件已处理");
+            gulp.series(taskFont)();
+            browserSync.reload();
+            cb();
+        });
         gulp.watch(path.normalize(`${envConfig.srcDir}/public/css/*.scss`).replace(/\\/gm, "/"), function (cb) {
             console.log("公共css文件已处理");
             gulp.series(taskPublicCss)();
@@ -318,6 +350,12 @@ commander.program
         gulp.watch(path.normalize(`${envConfig.srcDir}/public/js/*.js`).replace(/\\/gm, "/"), function (cb) {
             console.log("公共js文件已处理");
             gulp.series(taskPublicJs)();
+            browserSync.reload();
+            cb();
+        });
+        gulp.watch(path.normalize(`${envConfig.srcDir}/public/images/**/**`).replace(/\\/gm, "/"), function (cb) {
+            console.log("公共image文件已处理");
+            gulp.series(taskPublicImage)();
             browserSync.reload();
             cb();
         });
