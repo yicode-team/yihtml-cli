@@ -1,54 +1,68 @@
 #!/usr/bin/env node
 "use strict";
-const path = require("path");
+let path = require("path");
 // 环境变量配置
-const envConfig = require("../env.config.js");
+let envConfig = require("../env.config.js");
 // 处理工具配置
-const pluginConfig = require("../plugin.config.js")["dev"];
-
-const del = require("del");
-const gulp = require("gulp");
-const gulpSourcemaps = require("gulp-sourcemaps");
-const gulpSass = require("gulp-sass");
-const gulpPostcss = require("gulp-postcss");
-const gulpIf = require("gulp-if");
-const autoprefixer = require("autoprefixer");
-const fs = require("fs-extra");
-const download = require("download-git-repo");
-const gulpBabel = require("gulp-babel");
-// const gulpImage = require("gulp-image");
-const gulpUglifyEs = require("gulp-uglify-es").default;
-const shell = require("shelljs");
-const commander = require("commander");
-const browserSync = require("browser-sync").create();
-const px2viewport = require("postcss-px-to-viewport");
-const figlet = require("figlet");
-const pkg = require("../package.json");
-const figletFont = require("../fonts/Epic.js");
-const tempDir = path.resolve(envConfig.rootDir, "temp");
-const initDir = path.resolve(envConfig.rootDir);
+let pluginConfig = {};
+let del = require("del");
+let gulp = require("gulp");
+let gulpSourcemaps = require("gulp-sourcemaps");
+let gulpSass = require("gulp-sass");
+let gulpPostcss = require("gulp-postcss");
+let gulpIf = require("gulp-if");
+let autoprefixer = require("autoprefixer");
+let fs = require("fs-extra");
+let download = require("download-git-repo");
+let gulpBabel = require("gulp-babel");
+// let gulpImage = require("gulp-image");
+let gulpUglifyEs = require("gulp-uglify-es").default;
+let shell = require("shelljs");
+let commander = require("commander");
+let _ = require("lodash");
+let browserSync = require("browser-sync").create();
+let px2viewport = require("postcss-px-to-viewport");
+let through2 = require("through2");
+let figlet = require("figlet");
+let pkg = require("../package.json");
+let figletFont = require("../fonts/Epic.js");
+let tempDir = path.resolve(envConfig.rootDir, "temp");
+let initDir = path.resolve(envConfig.rootDir);
 gulpSass.compiler = require("node-sass");
 figlet.parseFont("figletFont", figletFont);
-const appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.js");
-const appConfig = {};
+let appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.js");
+let appConfig = {};
 if (fs.pathExists(appConfigFilePath) === true) {
     appConfig = require(appConfigFilePath);
 }
 
-// 添加postCss插件
-// postcssArray.push(stylelint());
-if (appConfig.mobile === true) {
-    pluginConfig.postcssParams.push(px2viewport(pluginConfig.px2viewport));
-}
-
-pluginConfig.postcssParams.push(autoprefixer());
 // 清除任务
 function taskClean() {
     return del(envConfig.distDir);
 }
 // 项目根目录下的html任务
 function taskHtml() {
-    return gulp.src(`${envConfig.srcDir}/*.html`, pluginConfig.srcParams).pipe(gulp.dest(envConfig.distDir));
+    return (
+        gulp
+            //
+            .src(`${envConfig.srcDir}/*.html`, pluginConfig.srcParams)
+            .pipe(
+                through2.obj(function (file, _, cb) {
+                    if (file.isBuffer()) {
+                        let fileData = file.contents.toString().replace(/<include.+src="(.+)".+\/>/gim, (match, p1) => {
+                            let tplPath = path.resolve(envConfig.srcDir, p1);
+                            if (fs.pathExistsSync(tplPath)) {
+                                return fs.readFileSync(tplPath);
+                            }
+                        });
+                        file.contents = Buffer.from(fileData);
+                    }
+
+                    cb(null, file);
+                })
+            )
+            .pipe(gulp.dest(envConfig.distDir))
+    );
 }
 // css任务
 function taskCss() {
@@ -107,6 +121,14 @@ function taskStatic(item) {
     return gulp.src(`${envConfig.srcDir}/static/**/*`, pluginConfig.srcParams).pipe(gulp.dest(`${envConfig.distDir}/static`));
 }
 async function start() {
+    pluginConfig = require("../plugin.config.js")[process.env.NODE_ENV];
+    // 添加postCss插件
+    // postcssArray.push(stylelint());
+    if (appConfig.mobile === true) {
+        pluginConfig.postcssParams.push(px2viewport(pluginConfig.px2viewport));
+    }
+
+    pluginConfig.postcssParams.push(autoprefixer());
     if (process.env.NODE_ENV === "dev") {
         console.log("开发环境启动中");
     } else {
@@ -167,6 +189,97 @@ async function init() {
         console.log(err);
     }
 }
+
+commander.program
+    //
+    .command("new")
+    .option("-p, --page <页面名称>", "自动生成页面")
+    .description("自动生成指令")
+    .action(async (cmd) => {
+        if (cmd.page) {
+            // 页面名称转化 HelL_o-wOrld
+            let lowerCaseName = _.toLower(cmd.page); // hell_o-world
+            let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
+            let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
+            let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
+
+            let paramsName = {
+                lowerCaseName,
+                kebabCaseName,
+                startCaseName,
+                camelCaseName,
+            };
+            // html文件路径
+            let htmlFilePath = path.resolve(envConfig.srcDir, camelCaseName + ".html");
+            if (fs.existsSync(htmlFilePath)) {
+                console.log(`${camelCaseName}.html 文件已存在`);
+                return;
+            }
+            // js文件路径
+            let jsFilePath = path.resolve(envConfig.srcDir, "js", camelCaseName + ".js");
+            if (fs.existsSync(jsFilePath)) {
+                console.log(`js/${camelCaseName}.js 文件已存在`);
+                return;
+            }
+            // scss文件路径
+            let scssFilePath = path.resolve(envConfig.srcDir, "css", camelCaseName + ".scss");
+            if (fs.existsSync(scssFilePath)) {
+                console.log(`css/${camelCaseName}.scss 文件已存在`);
+                return;
+            }
+
+            // 创建html
+            let htmlStrings = require("../template/html.js");
+            let htmlText = _.template(htmlStrings)(paramsName);
+            if (fs.writeFileSync(htmlFilePath, htmlText)) {
+                console.log("创建页面html失败");
+                return;
+            }
+
+            // 创建js
+            let jsStrings = require("../template/js.js");
+            let jsText = _.template(jsStrings)(paramsName);
+            if (fs.writeFileSync(jsFilePath, jsText)) {
+                console.log("创建页面js失败");
+                return;
+            }
+
+            // 创建scss
+            let scssStrings = require("../template/scss.js");
+            let scssText = _.template(scssStrings)(paramsName);
+            if (fs.writeFileSync(scssFilePath, scssText)) {
+                console.log("创建页面scss失败");
+                return;
+            }
+
+            console.log(`${cmd.page} 页面创建成功`);
+        }
+    });
+commander.program
+    //
+    .command("del")
+    .option("-p, --page <页面名称>", "自动删除页面")
+    .description("自动删除指令")
+    .action(async (cmd) => {
+        if (cmd.page) {
+            // 页面名称转化 HelL_o-wOrld
+            let lowerCaseName = _.toLower(cmd.page); // hell_o-world
+            let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
+            let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
+            let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
+            // html文件路径
+            let htmlFilePath = path.resolve(envConfig.srcDir, camelCaseName + ".html");
+            fs.removeSync(htmlFilePath);
+            // js文件路径
+            let jsFilePath = path.resolve(envConfig.srcDir, "js", camelCaseName + ".js");
+            fs.removeSync(jsFilePath);
+            // scss文件路径
+            let scssFilePath = path.resolve(envConfig.srcDir, "css", camelCaseName + ".scss");
+            fs.removeSync(scssFilePath);
+
+            console.log(`${cmd.page} 页面删除成功`);
+        }
+    });
 commander.program
     //
     .command("init")
