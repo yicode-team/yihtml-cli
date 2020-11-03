@@ -197,62 +197,44 @@ commander.program
     .description("自动生成指令")
     .action(async (cmd) => {
         if (cmd.page) {
-            // 页面名称转化 HelL_o-wOrld
-            let lowerCaseName = _.toLower(cmd.page); // hell_o-world
-            let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
-            let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
-            let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
+            try {
+                // 页面名称转化 HelL_o-wOrld
+                let lowerCaseName = _.toLower(cmd.page); // hell_o-world
+                let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
+                let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
+                let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
 
-            let paramsName = {
-                lowerCaseName,
-                kebabCaseName,
-                startCaseName,
-                camelCaseName,
-            };
-            // html文件路径
-            let htmlFilePath = path.resolve(envConfig.srcDir, camelCaseName + ".html");
-            if (fs.existsSync(htmlFilePath)) {
-                console.log(`${camelCaseName}.html 文件已存在`);
-                return;
-            }
-            // js文件路径
-            let jsFilePath = path.resolve(envConfig.srcDir, "js", camelCaseName + ".js");
-            if (fs.existsSync(jsFilePath)) {
-                console.log(`js/${camelCaseName}.js 文件已存在`);
-                return;
-            }
-            // scss文件路径
-            let scssFilePath = path.resolve(envConfig.srcDir, "css", camelCaseName + ".scss");
-            if (fs.existsSync(scssFilePath)) {
-                console.log(`css/${camelCaseName}.scss 文件已存在`);
-                return;
-            }
+                let paramsName = {
+                    lowerCaseName,
+                    kebabCaseName,
+                    startCaseName,
+                    camelCaseName,
+                };
 
-            // 创建html
-            let htmlStrings = require("../template/html.js");
-            let htmlText = _.template(htmlStrings)(paramsName);
-            if (fs.writeFileSync(htmlFilePath, htmlText)) {
-                console.log("创建页面html失败");
-                return;
-            }
+                // 创建html
+                let htmlFilePath = path.resolve(envConfig.srcDir, camelCaseName + ".html");
+                let htmlFileData = _.template(require("../template/html.js"))(paramsName);
+                fs.outputFileSync(htmlFilePath, htmlFileData);
 
-            // 创建js
-            let jsStrings = require("../template/js.js");
-            let jsText = _.template(jsStrings)(paramsName);
-            if (fs.writeFileSync(jsFilePath, jsText)) {
-                console.log("创建页面js失败");
-                return;
-            }
+                // 创建js
+                let jsFilePath = path.resolve(envConfig.srcDir, "js", camelCaseName + ".js");
+                let jsFileData = _.template(require("../template/js.js"))(paramsName);
+                fs.outputFileSync(jsFilePath, jsFileData);
 
-            // 创建scss
-            let scssStrings = require("../template/scss.js");
-            let scssText = _.template(scssStrings)(paramsName);
-            if (fs.writeFileSync(scssFilePath, scssText)) {
-                console.log("创建页面scss失败");
-                return;
-            }
+                // 创建scss
+                let scssFilePath = path.resolve(envConfig.srcDir, "css", camelCaseName + ".scss");
+                let scssFileData = _.template(require("../template/scss.js"))(paramsName);
+                fs.outputFileSync(scssFilePath, scssFileData);
 
-            console.log(`${cmd.page} 页面创建成功`);
+                // 创建图片模流
+                let imageDirPath = path.resolve(envConfig.srcDir, "images", camelCaseName);
+                fs.ensureDirSync(imageDirPath);
+
+                console.log(`${cmd.page} 页面创建成功`);
+            } catch (err) {
+                console.log(`${cmd.page} 页面创建失败`);
+                console.log(err);
+            }
         }
     });
 commander.program
@@ -262,22 +244,29 @@ commander.program
     .description("自动删除指令")
     .action(async (cmd) => {
         if (cmd.page) {
-            // 页面名称转化 HelL_o-wOrld
-            let lowerCaseName = _.toLower(cmd.page); // hell_o-world
-            let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
-            let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
-            let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
-            // html文件路径
-            let htmlFilePath = path.resolve(envConfig.srcDir, camelCaseName + ".html");
-            fs.removeSync(htmlFilePath);
-            // js文件路径
-            let jsFilePath = path.resolve(envConfig.srcDir, "js", camelCaseName + ".js");
-            fs.removeSync(jsFilePath);
-            // scss文件路径
-            let scssFilePath = path.resolve(envConfig.srcDir, "css", camelCaseName + ".scss");
-            fs.removeSync(scssFilePath);
+            try {
+                // 页面名称转化 HelL_o-wOrld
+                let lowerCaseName = _.toLower(cmd.page); // hell_o-world
+                let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
+                let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
+                let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
+                // html文件路径
+                let htmlFilePath = path.resolve(envConfig.srcDir, camelCaseName + ".html");
+                fs.removeSync(htmlFilePath);
+                // js文件路径
+                let jsFilePath = path.resolve(envConfig.srcDir, "js", camelCaseName + ".js");
+                fs.removeSync(jsFilePath);
+                // scss文件路径
+                let scssFilePath = path.resolve(envConfig.srcDir, "css", camelCaseName + ".scss");
+                fs.removeSync(scssFilePath);
+                // image目录路径
+                let imageDirPath = path.resolve(envConfig.srcDir, "images", camelCaseName);
+                fs.removeSync(imageDirPath);
 
-            console.log(`${cmd.page} 页面删除成功`);
+                console.log(`${cmd.page} 页面删除成功`);
+            } catch (err) {
+                console.log(`${cmd.page} 页面删除失败`);
+            }
         }
     });
 commander.program
