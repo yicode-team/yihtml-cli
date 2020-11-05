@@ -96,12 +96,12 @@ function taskImage() {
     );
 }
 // fonts任务
-function taskFont() {
+function taskPublicFonts() {
     return (
         gulp
-            .src(`${envConfig.srcDir}/fonts/**/*`)
+            .src(`${envConfig.srcDir}/public/fonts/**/*`)
             // .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
-            .pipe(gulp.dest(`${envConfig.distDir}/fonts`))
+            .pipe(gulp.dest(`${envConfig.distDir}/public/fonts`))
     );
 }
 // 公共css任务
@@ -161,7 +161,7 @@ async function start() {
             taskCss,
             taskJs,
             taskImage,
-            taskFont,
+            taskPublicFonts,
             taskPublicCss,
             taskPublicJs,
             taskPublicImage,
@@ -335,9 +335,9 @@ commander.program
             browserSync.reload();
             cb();
         });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/fonts/**/*`).replace(/\\/gm, "/"), function (cb) {
+        gulp.watch(path.normalize(`${envConfig.srcDir}/public/fonts/**/*`).replace(/\\/gm, "/"), function (cb) {
             console.log("fonts文件已处理");
-            gulp.series(taskFont)();
+            gulp.series(taskPublicFonts)();
             browserSync.reload();
             cb();
         });
