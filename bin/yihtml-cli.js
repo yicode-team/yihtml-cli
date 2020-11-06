@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 "use strict";
+let _ = require("lodash");
 let path = require("path");
 // 环境变量配置
 let envConfig = require("../env.config.js");
 // 处理工具配置
+
 let pluginConfig = {};
 let del = require("del");
 let gulp = require("gulp");
@@ -15,11 +17,9 @@ let autoprefixer = require("autoprefixer");
 let fs = require("fs-extra");
 let download = require("download-git-repo");
 let gulpBabel = require("gulp-babel");
-// let gulpImage = require("gulp-image");
 let gulpUglifyEs = require("gulp-uglify-es").default;
 let shell = require("shelljs");
 let commander = require("commander");
-let _ = require("lodash");
 let browserSync = require("browser-sync").create();
 let px2viewport = require("postcss-px-to-viewport");
 let through2 = require("through2");
@@ -30,11 +30,9 @@ let tempDir = path.resolve(envConfig.rootDir, "temp");
 let initDir = path.resolve(envConfig.rootDir);
 gulpSass.compiler = require("node-sass");
 figlet.parseFont("figletFont", figletFont);
-let appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.js");
-let appConfig = {};
-if (fs.pathExists(appConfigFilePath) === true) {
-    appConfig = require(appConfigFilePath);
-}
+let appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.json");
+let appConfigFileData = fs.readJsonSync(appConfigFilePath, { throws: false }) {};
+pluginConfig = _.merge(pluginConfig,appConfigFileData);
 
 // 清除任务
 function taskClean() {
@@ -88,21 +86,11 @@ function taskJs() {
 
 // js任务
 function taskImage() {
-    return (
-        gulp
-            .src(`${envConfig.srcDir}/images/**/*`)
-            // .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
-            .pipe(gulp.dest(`${envConfig.distDir}/images`))
-    );
+    return gulp.src(`${envConfig.srcDir}/images/**/*`).pipe(gulp.dest(`${envConfig.distDir}/images`));
 }
 // fonts任务
 function taskPublicFonts() {
-    return (
-        gulp
-            .src(`${envConfig.srcDir}/public/fonts/**/*`)
-            // .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
-            .pipe(gulp.dest(`${envConfig.distDir}/public/fonts`))
-    );
+    return gulp.src(`${envConfig.srcDir}/public/fonts/**/*`).pipe(gulp.dest(`${envConfig.distDir}/public/fonts`));
 }
 // 公共css任务
 function taskPublicCss() {
@@ -126,12 +114,7 @@ function taskPublicJs() {
 }
 // 公共image任务
 function taskPublicImage() {
-    return (
-        gulp
-            .src(`${envConfig.srcDir}/public/images/**/*`)
-            // .pipe(gulpIf(process.env.NODE_ENV === "build", gulpImage(pluginConfig.imageParams)))
-            .pipe(gulp.dest(`${envConfig.distDir}/public/images`))
-    );
+    return gulp.src(`${envConfig.srcDir}/public/images/**/*`).pipe(gulp.dest(`${envConfig.distDir}/public/images`));
 }
 
 // 复制static静态文件
@@ -143,7 +126,7 @@ async function start() {
         pluginConfig = require("../plugin.config.js")[process.env.NODE_ENV];
         // 添加postCss插件
         // postcssArray.push(stylelint());
-        if (appConfig.mobile === true) {
+        if (pluginConfig.px2viewport.enable !== false) {
             pluginConfig.postcssParams.push(px2viewport(pluginConfig.px2viewport));
         }
 

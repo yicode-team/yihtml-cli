@@ -15,19 +15,6 @@ const devParams = {
     },
     // postcss参数
     postcssParams: [],
-    // px2rem参数
-    px2rem: {
-        rootValue: { rpx: 192 },
-        unitPrecision: 5,
-        propWhiteList: [],
-        propBlackList: [],
-        exclude: false,
-        selectorBlackList: [],
-        ignoreIdentifier: false,
-        replace: true,
-        mediaQuery: false,
-        minPixelValue: 0,
-    },
     px2viewport: {
         unitToConvert: "px",
         viewportWidth: 750,
@@ -62,9 +49,6 @@ const devParams = {
             // ['add-module-exports']
         ],
     },
-    imageParams: {
-        quiet: true,
-    },
     // sass参数
     sassParams: {
         outputStyle: "expanded",
@@ -72,11 +56,6 @@ const devParams = {
     // src参数
     srcParams: {
         allowEmpty: true,
-    },
-    // include参数
-    includeParams: {
-        hardFail: true,
-        separateInputs: true,
     },
     // html压缩参数
     yueHtmlMin: {
