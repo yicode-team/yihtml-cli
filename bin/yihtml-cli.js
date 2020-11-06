@@ -139,48 +139,53 @@ function taskStatic() {
     return gulp.src(`${envConfig.srcDir}/static/**/*`, pluginConfig.srcParams).pipe(gulp.dest(`${envConfig.distDir}/static`));
 }
 async function start() {
-    pluginConfig = require("../plugin.config.js")[process.env.NODE_ENV];
-    // 添加postCss插件
-    // postcssArray.push(stylelint());
-    if (appConfig.mobile === true) {
-        pluginConfig.postcssParams.push(px2viewport(pluginConfig.px2viewport));
-    }
-
-    pluginConfig.postcssParams.push(autoprefixer());
-    if (process.env.NODE_ENV === "dev") {
-        console.log("开发环境启动中");
-    } else {
-        console.log("发布环境资源构建中，包含图片压缩，请耐心等待...");
-    }
-    gulp.series(
-        //
-        taskClean,
-        gulp.parallel(
-            //
-            taskHtml,
-            taskCss,
-            taskJs,
-            taskImage,
-            taskPublicFonts,
-            taskPublicCss,
-            taskPublicJs,
-            taskPublicImage,
-            taskStatic
-        ),
-        function () {
-            if (process.env.NODE_ENV === "dev") {
-                browserSync.init({
-                    server: {
-                        baseDir: path.resolve(envConfig.distDir),
-                    },
-                });
-                console.log("开发环境启动完毕");
-            }
-            if (process.env.NODE_ENV === "build") {
-                console.log("发布环境资源打包完毕");
-            }
+    try {
+        pluginConfig = require("../plugin.config.js")[process.env.NODE_ENV];
+        // 添加postCss插件
+        // postcssArray.push(stylelint());
+        if (appConfig.mobile === true) {
+            pluginConfig.postcssParams.push(px2viewport(pluginConfig.px2viewport));
         }
-    )();
+
+        pluginConfig.postcssParams.push(autoprefixer());
+        if (process.env.NODE_ENV === "dev") {
+            console.log("开发环境启动中");
+        } else {
+            console.log("发布环境资源构建中，包含图片压缩，请耐心等待...");
+        }
+        gulp.series(
+            //
+            taskClean,
+            gulp.parallel(
+                //
+                taskHtml,
+                taskCss,
+                taskJs,
+                taskImage,
+                taskPublicFonts,
+                taskPublicCss,
+                taskPublicJs,
+                taskPublicImage,
+                taskStatic
+            ),
+            function () {
+                if (process.env.NODE_ENV === "dev") {
+                    browserSync.init({
+                        server: {
+                            baseDir: path.resolve(envConfig.distDir),
+                        },
+                    });
+                    console.log("开发环境启动完毕");
+                }
+                if (process.env.NODE_ENV === "build") {
+                    console.log("发布环境资源打包完毕");
+                }
+            }
+        )();
+    } catch (err) {
+        console.log("err");
+        console.log(err);
+    }
 }
 // 下载项目
 async function downloadProject() {
