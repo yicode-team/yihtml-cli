@@ -1,7 +1,7 @@
-const _ = require("lodash");
-const path = require("path");
-const envConfig = require("./env.config.js");
-const devParams = {
+let _ = require("lodash");
+let path = require("path");
+let envConfig = require("./env.config.js");
+let commonParams = {
     // js压缩参数
     uflifyParams: {
         compress: {
@@ -72,7 +72,7 @@ const devParams = {
         continueOnParseError: false,
     },
 };
-const buildParams = {
+let buildParams = {
     uflifyParams: {
         compress: {
             drop_console: true,
@@ -85,8 +85,11 @@ const buildParams = {
         outputStyle: "compressed",
     },
 };
-const config = {
-    dev: devParams,
-    build: _.merge(_.cloneDeep(devParams), buildParams),
-};
-module.exports = config;
+let devParams = {};
+if (process.env.NODE_ENV === "build") {
+    commonParams = _.merge(commonParams, buildParams);
+}
+if (process.env.NODE_ENV === "dev") {
+    commonParams = _.merge(commonParams, devParams);
+}
+module.exports = commonParams;

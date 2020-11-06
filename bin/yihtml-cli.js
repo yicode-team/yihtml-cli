@@ -2,11 +2,9 @@
 "use strict";
 let _ = require("lodash");
 let path = require("path");
+let pluginConfig = {};
 // 环境变量配置
 let envConfig = require("../env.config.js");
-// 处理工具配置
-
-let pluginConfig = {};
 let del = require("del");
 let gulp = require("gulp");
 let gulpSourcemaps = require("gulp-sourcemaps");
@@ -20,19 +18,13 @@ let gulpBabel = require("gulp-babel");
 let gulpUglifyEs = require("gulp-uglify-es").default;
 let shell = require("shelljs");
 let commander = require("commander");
-let browserSync = require("browser-sync").create();
+let browserSync = require("browser-sync").create("yihtml");
 let px2viewport = require("postcss-px-to-viewport");
 let through2 = require("through2");
-let figlet = require("figlet");
 let pkg = require("../package.json");
-let figletFont = require("../fonts/Epic.js");
 let tempDir = path.resolve(envConfig.rootDir, "temp");
 let initDir = path.resolve(envConfig.rootDir);
 gulpSass.compiler = require("node-sass");
-figlet.parseFont("figletFont", figletFont);
-let appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.json");
-let appConfigFileData = fs.readJsonSync(appConfigFilePath, { throws: false }) {};
-pluginConfig = _.merge(pluginConfig,appConfigFileData);
 
 // 清除任务
 function taskClean() {
@@ -121,9 +113,18 @@ function taskPublicImage() {
 function taskStatic() {
     return gulp.src(`${envConfig.srcDir}/static/**/*`, pluginConfig.srcParams).pipe(gulp.dest(`${envConfig.distDir}/static`));
 }
-async function start() {
+async function start(node_env) {
     try {
-        pluginConfig = require("../plugin.config.js")[process.env.NODE_ENV];
+        shell.env["NODE_ENV"] = node_env;
+        pluginConfig = require("../plugin.config.js");
+        let appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.js");
+        if (fs.pathExists(appConfigFilePath)) {
+            let appConfigFileData = require(appConfigFilePath);
+            if (_.isObject(appConfigFileData)) {
+                pluginConfig = _.merge(pluginConfig, appConfigFileData);
+            }
+        }
+        console.log(pluginConfig);
         // 添加postCss插件
         // postcssArray.push(stylelint());
         if (pluginConfig.px2viewport.enable !== false) {
@@ -157,6 +158,7 @@ async function start() {
                         server: {
                             baseDir: path.resolve(envConfig.distDir),
                         },
+                        open: false,
                     });
                     console.log("开发环境启动完毕");
                 }
@@ -289,16 +291,14 @@ commander.program
     .command("build")
     .description("发布环境打包")
     .action(async (source) => {
-        shell.env["NODE_ENV"] = "build";
-        start();
+        start("build");
     });
 commander.program
     //
     .command("dev")
     .description("启动开发环境")
     .action(async (source) => {
-        shell.env["NODE_ENV"] = "dev";
-        start();
+        start("dev");
         gulp.watch(path.normalize(`${envConfig.srcDir}/*.html`).replace(/\\/gm, "/"), function (cb) {
             console.log("页面html文件已处理");
             gulp.series(taskHtml)();
