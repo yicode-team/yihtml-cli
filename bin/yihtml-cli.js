@@ -317,6 +317,12 @@ commander.program
             browserSync.reload();
             cb();
         });
+        gulp.watch(path.normalize(`${envConfig.srcDir}/tpls/*.html`).replace(/\\/gm, "/"), function (cb) {
+            console.log("模板html文件已处理");
+            gulp.series(taskHtml)();
+            browserSync.reload();
+            cb();
+        });
         gulp.watch(path.normalize(`${envConfig.srcDir}/css/*.scss`).replace(/\\/gm, "/"), function (cb) {
             console.log("页面css文件已处理");
             gulp.series(taskCss)();
