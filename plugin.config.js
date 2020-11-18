@@ -34,19 +34,26 @@ let commonParams = {
     },
     // babel参数
     babelParams: {
-        presets: [path.resolve(envConfig.cliDir, "node_modules", "@babel", "preset-env")],
+        presets: [
+            [
+                path.resolve(envConfig.cliDir, "node_modules", "@babel", "preset-env"),
+                {
+                    useBuiltIns: "usage",
+                    corejs: "3",
+                },
+            ],
+        ],
         plugins: [
-            // [
-            //     "@babel/plugin-transform-runtime",
-            //     {
-            //         absoluteRuntime: false,
-            //         corejs: false,
-            //         helpers: true,
-            //         regenerator: false,
-            //         useESModules: false,
-            //     },
-            // ],
-            // ['add-module-exports']
+            [
+                path.resolve(envConfig.cliDir, "node_modules", "@babel", "plugin-transform-runtime"),
+                {
+                    absoluteRuntime: false,
+                    corejs: 3,
+                    helpers: true,
+                    regenerator: true,
+                    useESModules: false,
+                },
+            ],
         ],
     },
     // sass参数
@@ -75,7 +82,7 @@ let commonParams = {
 let buildParams = {
     uflifyParams: {
         compress: {
-            drop_console: true,
+            drop_console: false,
             drop_debugger: true,
             conditionals: true,
         },
@@ -85,6 +92,9 @@ let buildParams = {
         outputStyle: "compressed",
     },
 };
+if (process.env.compress === "false") {
+    buildParams.sassParams.outputStyle = "expanded";
+}
 let devParams = {};
 if (process.env.NODE_ENV === "build") {
     commonParams = _.merge(commonParams, buildParams);
@@ -92,4 +102,5 @@ if (process.env.NODE_ENV === "build") {
 if (process.env.NODE_ENV === "dev") {
     commonParams = _.merge(commonParams, devParams);
 }
+
 module.exports = commonParams;

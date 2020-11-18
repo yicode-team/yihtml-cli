@@ -7,6 +7,7 @@ let pluginConfig = {};
 let envConfig = require("../env.config.js");
 let del = require("del");
 let gulp = require("gulp");
+let rollup = require("rollup");
 let gulpSourcemaps = require("gulp-sourcemaps");
 let gulpSass = require("gulp-sass");
 let gulpPostcss = require("gulp-postcss");
@@ -24,7 +25,29 @@ let through2 = require("through2");
 let pkg = require("../package.json");
 let tempDir = path.resolve(envConfig.rootDir, "temp");
 let initDir = path.resolve(envConfig.rootDir);
+let browserify = require("browserify");
+let gulpRollup = require("gulp-rollup");
+let rollupResolve = require("@rollup/plugin-node-resolve").default;
+let rollupCommonjs = require("@rollup/plugin-commonjs");
 gulpSass.compiler = require("node-sass");
+
+// 获取不同格式的名称
+function getNames(name) {
+    // 页面名称转化 HelL_o-wOrld
+    let lowerCaseName = _.toLower(name); // hell_o-world
+    let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
+    let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
+    let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
+
+    // 名称集合
+    let namesCollection = {
+        lowerCaseName,
+        kebabCaseName,
+        startCaseName,
+        camelCaseName,
+    };
+    return namesCollection;
+}
 
 // 清除任务
 function taskClean() {
@@ -94,15 +117,62 @@ function taskPublicCss() {
         .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
         .pipe(gulp.dest(`${envConfig.distDir}/public/css`));
 }
+
 // 公共js任务
 function taskPublicJs() {
-    return gulp
-        .src(`${envConfig.srcDir}/public/js/*.js`)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
-        .pipe(gulpBabel(pluginConfig.babelParams))
-        .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
-        .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflifyParams)))
-        .pipe(gulp.dest(`${envConfig.distDir}/public/js`));
+    return (
+        gulp
+            .src(`${envConfig.srcDir}/public/js/*.js`)
+            .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
+            .pipe(gulpBabel(pluginConfig.babelParams))
+            // .pipe(
+            //     gulpIf(
+            //         process.env.NODE_ENV == "dev",
+            //         through2.obj(function (file, enc, cb) {
+            //             browserify(file.path, {
+            //                 //
+            //                 basedir: envConfig.cliDir,
+            //                 paths: ["node_modules"],
+            //                 bundleExternal: true,
+            //             })
+            //                 .transform("babelify", {
+            //                     presets: [
+            //                         [
+            //                             path.resolve(envConfig.cliDir, "node_modules", "@babel", "preset-env"),
+            //                             {
+            //                                 useBuiltIns: "usage",
+            //                                 corejs: "3",
+            //                             },
+            //                         ],
+            //                     ],
+            //                     plugins: [
+            //                         [
+            //                             path.resolve(envConfig.cliDir, "node_modules", "@babel", "plugin-transform-runtime"),
+            //                             {
+            //                                 absoluteRuntime: false,
+            //                                 corejs: 3,
+            //                                 helpers: true,
+            //                                 regenerator: true,
+            //                                 useESModules: false,
+            //                             },
+            //                         ],
+            //                     ],
+            //                 })
+            //                 .bundle((err, res) => {
+            //                     if (err) {
+            //                         console.log(err);
+            //                         return;
+            //                     }
+            //                     file.contents = res;
+            //                     cb(null, file);
+            //                 });
+            //         })
+            //     )
+            // )
+            .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
+            .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflifyParams)))
+            .pipe(gulp.dest(`${envConfig.distDir}/public/js`))
+    );
 }
 // 公共image任务
 function taskPublicImage() {
@@ -113,9 +183,10 @@ function taskPublicImage() {
 function taskStatic() {
     return gulp.src(`${envConfig.srcDir}/static/**/*`, pluginConfig.srcParams).pipe(gulp.dest(`${envConfig.distDir}/static`));
 }
-async function start(node_env) {
+
+// 启动项目
+async function start() {
     try {
-        shell.env["NODE_ENV"] = node_env;
         pluginConfig = require("../plugin.config.js");
         let appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.js");
         if (fs.pathExists(appConfigFilePath)) {
@@ -124,7 +195,6 @@ async function start(node_env) {
                 pluginConfig = _.merge(pluginConfig, appConfigFileData);
             }
         }
-        console.log(pluginConfig);
         // 添加postCss插件
         // postcssArray.push(stylelint());
         if (pluginConfig.px2viewport.enable !== false) {
@@ -135,7 +205,7 @@ async function start(node_env) {
         if (process.env.NODE_ENV === "dev") {
             console.log("开发环境启动中");
         } else {
-            console.log("发布环境资源构建中，包含图片压缩，请耐心等待...");
+            console.log("发布环境资源构建中，请耐心等待...");
         }
         gulp.series(
             //
@@ -208,36 +278,26 @@ commander.program
     .action(async (cmd) => {
         if (cmd.page) {
             try {
-                // 页面名称转化 HelL_o-wOrld
-                let lowerCaseName = _.toLower(cmd.page); // hell_o-world
-                let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
-                let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
-                let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
-
-                let paramsName = {
-                    lowerCaseName,
-                    kebabCaseName,
-                    startCaseName,
-                    camelCaseName,
-                };
+                // 获取名称转化集合
+                let names = getNames(cmd.page);
 
                 // 创建html
-                let htmlFilePath = path.resolve(envConfig.srcDir, camelCaseName + ".html");
-                let htmlFileData = _.template(require("../template/html.js"))(paramsName);
+                let htmlFilePath = path.resolve(envConfig.srcDir, names.camelCaseName + ".html");
+                let htmlFileData = _.template(require("../template/html.js"))(names);
                 fs.outputFileSync(htmlFilePath, htmlFileData);
 
                 // 创建js
-                let jsFilePath = path.resolve(envConfig.srcDir, "js", camelCaseName + ".js");
-                let jsFileData = _.template(require("../template/js.js"))(paramsName);
+                let jsFilePath = path.resolve(envConfig.srcDir, "js", names.camelCaseName + ".js");
+                let jsFileData = _.template(require("../template/js.js"))(names);
                 fs.outputFileSync(jsFilePath, jsFileData);
 
                 // 创建scss
-                let scssFilePath = path.resolve(envConfig.srcDir, "css", camelCaseName + ".scss");
-                let scssFileData = _.template(require("../template/scss.js"))(paramsName);
+                let scssFilePath = path.resolve(envConfig.srcDir, "css", names.camelCaseName + ".scss");
+                let scssFileData = _.template(require("../template/scss.js"))(names);
                 fs.outputFileSync(scssFilePath, scssFileData);
 
                 // 创建图片模流
-                let imageDirPath = path.resolve(envConfig.srcDir, "images", camelCaseName);
+                let imageDirPath = path.resolve(envConfig.srcDir, "images", names.camelCaseName);
                 fs.ensureDirSync(imageDirPath);
 
                 console.log(`${cmd.page} 页面创建成功`);
@@ -255,22 +315,18 @@ commander.program
     .action(async (cmd) => {
         if (cmd.page) {
             try {
-                // 页面名称转化 HelL_o-wOrld
-                let lowerCaseName = _.toLower(cmd.page); // hell_o-world
-                let kebabCaseName = _.kebabCase(lowerCaseName); // hell-o-world
-                let camelCaseName = _.camelCase(kebabCaseName); // hellOWorld
-                let startCaseName = _.replace(_.startCase(camelCaseName), /\s+/g, ""); // HellOWorld
+                let names = getNames(cmd.page);
                 // html文件路径
-                let htmlFilePath = path.resolve(envConfig.srcDir, camelCaseName + ".html");
+                let htmlFilePath = path.resolve(envConfig.srcDir, names.camelCaseName + ".html");
                 fs.removeSync(htmlFilePath);
                 // js文件路径
-                let jsFilePath = path.resolve(envConfig.srcDir, "js", camelCaseName + ".js");
+                let jsFilePath = path.resolve(envConfig.srcDir, "js", names.camelCaseName + ".js");
                 fs.removeSync(jsFilePath);
                 // scss文件路径
-                let scssFilePath = path.resolve(envConfig.srcDir, "css", camelCaseName + ".scss");
+                let scssFilePath = path.resolve(envConfig.srcDir, "css", names.camelCaseName + ".scss");
                 fs.removeSync(scssFilePath);
                 // image目录路径
-                let imageDirPath = path.resolve(envConfig.srcDir, "images", camelCaseName);
+                let imageDirPath = path.resolve(envConfig.srcDir, "images", names.camelCaseName);
                 fs.removeSync(imageDirPath);
 
                 console.log(`${cmd.page} 页面删除成功`);
@@ -289,16 +345,30 @@ commander.program
 commander.program
     //
     .command("build")
+    .option("--no-compress", "禁止代码压缩")
+    .option("--no-map", "不生成map调试文件")
     .description("发布环境打包")
+    .action(async (cmd) => {
+        shell.env["NODE_ENV"] = "build";
+        shell.env["compress"] = cmd.compress;
+        shell.env["map"] = cmd.map;
+        start();
+    });
+commander.program
+    //
+    .command("lab")
+    .description("启动实验环境")
     .action(async (source) => {
-        start("build");
+        shell.env["NODE_ENV"] = "lab";
+        start();
     });
 commander.program
     //
     .command("dev")
     .description("启动开发环境")
-    .action(async (source) => {
-        start("dev");
+    .action(async (cmd) => {
+        shell.env["NODE_ENV"] = "dev";
+        start();
         gulp.watch(path.normalize(`${envConfig.srcDir}/*.html`).replace(/\\/gm, "/"), function (cb) {
             console.log("页面html文件已处理");
             gulp.series(taskHtml)();
