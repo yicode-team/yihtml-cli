@@ -2,12 +2,14 @@
 "use strict";
 let _ = require("lodash");
 let path = require("path");
+// 插件配置
 let pluginConfig = {};
 // 环境变量配置
 let envConfig = require("../env.config.js");
+// 包信息
+let pkg = require("../package.json");
 let del = require("del");
 let gulp = require("gulp");
-let rollup = require("rollup");
 let gulpSourcemaps = require("gulp-sourcemaps");
 let gulpSass = require("gulp-sass");
 let gulpPostcss = require("gulp-postcss");
@@ -22,13 +24,8 @@ let commander = require("commander");
 let browserSync = require("browser-sync").create("yihtml");
 let px2viewport = require("postcss-px-to-viewport");
 let through2 = require("through2");
-let pkg = require("../package.json");
-let tempDir = path.resolve(envConfig.rootDir, "temp");
-let initDir = path.resolve(envConfig.rootDir);
 let browserify = require("browserify");
-let gulpRollup = require("gulp-rollup");
-let rollupResolve = require("@rollup/plugin-node-resolve").default;
-let rollupCommonjs = require("@rollup/plugin-commonjs");
+
 gulpSass.compiler = require("node-sass");
 
 // 获取不同格式的名称
@@ -55,35 +52,33 @@ function taskClean() {
 }
 // 项目根目录下的html任务
 function taskHtml() {
-    return (
-        gulp
-            //
-            .src(`${envConfig.srcDir}/*.html`, pluginConfig.srcParams)
-            .pipe(
-                through2.obj(function (file, _, cb) {
-                    if (file.isBuffer()) {
-                        let fileData = file.contents.toString().replace(/<include.+src="(.+)".+\/>/gim, (match, p1) => {
-                            let tplPath = path.resolve(envConfig.srcDir, p1);
-                            if (fs.pathExistsSync(tplPath)) {
-                                return fs.readFileSync(tplPath);
-                            }
-                        });
-                        file.contents = Buffer.from(fileData);
-                    }
+    let _ = gulp
+        .src(`${envConfig.srcDir}/*.html`, pluginConfig.gulp.src)
+        .pipe(
+            through2.obj(function (file, _, cb) {
+                if (file.isBuffer()) {
+                    let fileData = file.contents.toString().replace(/<include.+src="(.+)".+\/>/gim, (match, p1) => {
+                        let tplPath = path.resolve(envConfig.srcDir, p1);
+                        if (fs.pathExistsSync(tplPath)) {
+                            return fs.readFileSync(tplPath);
+                        }
+                    });
+                    file.contents = Buffer.from(fileData);
+                }
 
-                    cb(null, file);
-                })
-            )
-            .pipe(gulp.dest(envConfig.distDir))
-    );
+                cb(null, file);
+            })
+        )
+        .pipe(gulp.dest(envConfig.distDir));
+    return _;
 }
 // css任务
 function taskCss() {
     return gulp
-        .src(`${envConfig.srcDir}/css/*.scss`, pluginConfig.srcParams)
+        .src(`${envConfig.srcDir}/css/*.scss`, pluginConfig.gulp.src)
         .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
-        .pipe(gulpSass(pluginConfig.sassParams))
-        .pipe(gulpPostcss(pluginConfig.postcssParams))
+        .pipe(gulpSass(pluginConfig.sass))
+        .pipe(gulpPostcss(pluginConfig.postcss))
         .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
         .pipe(gulp.dest(`${envConfig.distDir}/css`));
 }
@@ -93,9 +88,28 @@ function taskJs() {
     return gulp
         .src(`${envConfig.srcDir}/js/*.js`)
         .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
-        .pipe(gulpBabel(pluginConfig.babelParams))
+        .pipe(gulpBabel(pluginConfig.babel))
+        .pipe(
+            through2.obj(function (file, enc, cb) {
+                browserify(file.path, {
+                    //
+                    basedir: envConfig.cliDir,
+                    paths: ["node_modules"],
+                    bundleExternal: true,
+                })
+                    .transform("babelify", pluginConfig.babel)
+                    .bundle((err, res) => {
+                        if (err) {
+                            console.log(err);
+                            return;
+                        }
+                        file.contents = res;
+                        cb(null, file);
+                    });
+            })
+        )
         .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
-        .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflifyParams)))
+        .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflify)))
         .pipe(gulp.dest(`${envConfig.distDir}/js`));
 }
 
@@ -110,69 +124,41 @@ function taskPublicFonts() {
 // 公共css任务
 function taskPublicCss() {
     return gulp
-        .src(`${envConfig.srcDir}/public/css/*.scss`, pluginConfig.srcParams)
+        .src(`${envConfig.srcDir}/public/css/*.scss`, pluginConfig.gulp.src)
         .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
-        .pipe(gulpSass(pluginConfig.sassParams))
-        .pipe(gulpPostcss(pluginConfig.postcssParams))
+        .pipe(gulpSass(pluginConfig.sass))
+        .pipe(gulpPostcss(pluginConfig.postcss))
         .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
         .pipe(gulp.dest(`${envConfig.distDir}/public/css`));
 }
 
 // 公共js任务
 function taskPublicJs() {
-    return (
-        gulp
-            .src(`${envConfig.srcDir}/public/js/*.js`)
-            .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
-            .pipe(gulpBabel(pluginConfig.babelParams))
-            // .pipe(
-            //     gulpIf(
-            //         process.env.NODE_ENV == "dev",
-            //         through2.obj(function (file, enc, cb) {
-            //             browserify(file.path, {
-            //                 //
-            //                 basedir: envConfig.cliDir,
-            //                 paths: ["node_modules"],
-            //                 bundleExternal: true,
-            //             })
-            //                 .transform("babelify", {
-            //                     presets: [
-            //                         [
-            //                             path.resolve(envConfig.cliDir, "node_modules", "@babel", "preset-env"),
-            //                             {
-            //                                 useBuiltIns: "usage",
-            //                                 corejs: "3",
-            //                             },
-            //                         ],
-            //                     ],
-            //                     plugins: [
-            //                         [
-            //                             path.resolve(envConfig.cliDir, "node_modules", "@babel", "plugin-transform-runtime"),
-            //                             {
-            //                                 absoluteRuntime: false,
-            //                                 corejs: 3,
-            //                                 helpers: true,
-            //                                 regenerator: true,
-            //                                 useESModules: false,
-            //                             },
-            //                         ],
-            //                     ],
-            //                 })
-            //                 .bundle((err, res) => {
-            //                     if (err) {
-            //                         console.log(err);
-            //                         return;
-            //                     }
-            //                     file.contents = res;
-            //                     cb(null, file);
-            //                 });
-            //         })
-            //     )
-            // )
-            .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
-            .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflifyParams)))
-            .pipe(gulp.dest(`${envConfig.distDir}/public/js`))
-    );
+    return gulp
+        .src(`${envConfig.srcDir}/public/js/*.js`)
+        .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(
+            through2.obj(function (file, enc, cb) {
+                browserify(file.path, {
+                    //
+                    basedir: envConfig.cliDir,
+                    paths: ["node_modules"],
+                    bundleExternal: true,
+                })
+                    .transform("babelify", pluginConfig.babel)
+                    .bundle((err, res) => {
+                        if (err) {
+                            console.log(err);
+                            return;
+                        }
+                        file.contents = res;
+                        cb(null, file);
+                    });
+            })
+        )
+        .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflify)))
+        .pipe(gulp.dest(`${envConfig.distDir}/public/js`));
 }
 // 公共image任务
 function taskPublicImage() {
@@ -181,29 +167,36 @@ function taskPublicImage() {
 
 // 复制static静态文件
 function taskStatic() {
-    return gulp.src(`${envConfig.srcDir}/static/**/*`, pluginConfig.srcParams).pipe(gulp.dest(`${envConfig.distDir}/static`));
+    return gulp.src(`${envConfig.srcDir}/static/**/*`, pluginConfig.gulp.src).pipe(gulp.dest(`${envConfig.distDir}/static`));
 }
 
 // 启动项目
 async function start() {
     try {
         pluginConfig = require("../plugin.config.js");
-        let appConfigFilePath = path.resolve(envConfig.rootDir, "yihtml.config.js");
-        if (fs.pathExists(appConfigFilePath)) {
-            let appConfigFileData = require(appConfigFilePath);
-            if (_.isObject(appConfigFileData)) {
-                pluginConfig = _.merge(pluginConfig, appConfigFileData);
+        let yihtmlConfigPath = path.resolve(envConfig.rootDir, "yihtml.config.js");
+        if (fs.pathExists(yihtmlConfigPath)) {
+            let yihtmlConfigData = require(yihtmlConfigPath);
+            if (_.isObject(yihtmlConfigData)) {
+                pluginConfig = _.merge(pluginConfig, yihtmlConfigData);
             }
         }
         // 添加postCss插件
-        // postcssArray.push(stylelint());
-        if (pluginConfig.px2viewport.enable !== false) {
-            pluginConfig.postcssParams.push(px2viewport(pluginConfig.px2viewport));
+        if (pluginConfig.env.stylelint === true) {
+            pluginConfig.postcss.push(stylelint(pluginConfig.stylelint));
         }
 
-        pluginConfig.postcssParams.push(autoprefixer());
+        if (pluginConfig.px2viewport.enable !== false) {
+            pluginConfig.postcss.push(px2viewport(pluginConfig.px2viewport));
+        }
+
+        pluginConfig.postcss.push(autoprefixer());
         if (process.env.NODE_ENV === "dev") {
-            console.log("开发环境启动中");
+            if (process.env.NODE_LAB === "true") {
+                console.log("实验环境打包中");
+            } else {
+                console.log("开发环境启动中");
+            }
         } else {
             console.log("发布环境资源构建中，请耐心等待...");
         }
@@ -224,13 +217,17 @@ async function start() {
             ),
             function () {
                 if (process.env.NODE_ENV === "dev") {
-                    browserSync.init({
-                        server: {
-                            baseDir: path.resolve(envConfig.distDir),
-                        },
-                        open: false,
-                    });
-                    console.log("开发环境启动完毕");
+                    if (process.env.NODE_LAB === "true") {
+                        console.log("实验环境打包完毕");
+                    } else {
+                        browserSync.init({
+                            server: {
+                                baseDir: path.resolve(envConfig.distDir),
+                            },
+                            open: false,
+                        });
+                        console.log("开发环境启动完毕");
+                    }
                 }
                 if (process.env.NODE_ENV === "build") {
                     console.log("发布环境资源打包完毕");
@@ -245,7 +242,7 @@ async function start() {
 // 下载项目
 async function downloadProject() {
     return new Promise((resolve, reject) => {
-        download("https://gitee.com:banshiweichen/yihtml-template#master", tempDir, { clone: true }, function (err) {
+        download("https://gitee.com:banshiweichen/yihtml-template#master", envConfig.tempDir, { clone: true }, function (err) {
             if (err) {
                 reject(err);
             } else {
@@ -258,11 +255,11 @@ async function downloadProject() {
 async function init() {
     try {
         console.log("yihtml-template模板下载中...");
-        fs.removeSync(tempDir);
-        fs.ensureDirSync(tempDir);
+        fs.removeSync(envConfig.tempDir);
+        fs.ensureDirSync(envConfig.tempDir);
         await downloadProject();
-        fs.copySync(tempDir, initDir, { overwrite: true });
-        fs.removeSync(tempDir);
+        fs.copySync(envConfig.tempDir, envConfig.rootDir, { overwrite: true });
+        fs.removeSync(envConfig.tempDir);
         console.log("yihtml-template模板下载成功");
     } catch (err) {
         console.log("yihtml-template模板下载失败");
@@ -345,90 +342,82 @@ commander.program
 commander.program
     //
     .command("build")
-    .option("--no-compress", "禁止代码压缩")
-    .option("--no-map", "不生成map调试文件")
     .description("发布环境打包")
     .action(async (cmd) => {
         shell.env["NODE_ENV"] = "build";
-        shell.env["compress"] = cmd.compress;
-        shell.env["map"] = cmd.map;
-        start();
-    });
-commander.program
-    //
-    .command("lab")
-    .description("启动实验环境")
-    .action(async (source) => {
-        shell.env["NODE_ENV"] = "lab";
         start();
     });
 commander.program
     //
     .command("dev")
+    .option("--lab", "开启实验打包")
     .description("启动开发环境")
     .action(async (cmd) => {
+        shell.env["NODE_LAB"] = cmd.lab;
         shell.env["NODE_ENV"] = "dev";
         start();
-        gulp.watch(path.normalize(`${envConfig.srcDir}/*.html`).replace(/\\/gm, "/"), function (cb) {
-            console.log("页面html文件已处理");
-            gulp.series(taskHtml)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/tpls/*.html`).replace(/\\/gm, "/"), function (cb) {
-            console.log("模板html文件已处理");
-            gulp.series(taskHtml)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/css/*.scss`).replace(/\\/gm, "/"), function (cb) {
-            console.log("页面css文件已处理");
-            gulp.series(taskCss)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/js/*.js`).replace(/\\/gm, "/"), function (cb) {
-            console.log("页面js文件已处理");
-            gulp.series(taskJs)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/images/**/*`).replace(/\\/gm, "/"), function (cb) {
-            console.log("页面images文件已处理");
-            gulp.series(taskImage)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/public/fonts/**/*`).replace(/\\/gm, "/"), function (cb) {
-            console.log("fonts文件已处理");
-            gulp.series(taskPublicFonts)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/public/css/*.scss`).replace(/\\/gm, "/"), function (cb) {
-            console.log("公共css文件已处理");
-            gulp.series(taskPublicCss)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/public/js/*.js`).replace(/\\/gm, "/"), function (cb) {
-            console.log("公共js文件已处理");
-            gulp.series(taskPublicJs)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/public/images/**/**`).replace(/\\/gm, "/"), function (cb) {
-            console.log("公共image文件已处理");
-            gulp.series(taskPublicImage)();
-            browserSync.reload();
-            cb();
-        });
-        gulp.watch(path.normalize(`${envConfig.srcDir}/static/**/*`).replace(/\\/gm, "/"), function (cb) {
-            console.log("静态资源文件已处理");
-            gulp.series(taskStatic)();
-            browserSync.reload();
-            cb();
-        });
+        if (cmd.lab === "false") {
+            gulp.watch(path.normalize(`${envConfig.srcDir}/*.html`).replace(/\\/gm, "/"), function (cb) {
+                console.log("页面html文件已处理");
+                gulp.series(taskHtml)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/tpls/*.html`).replace(/\\/gm, "/"), function (cb) {
+                console.log("模板html文件已处理");
+                gulp.series(taskHtml)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/css/*.scss`).replace(/\\/gm, "/"), function (cb) {
+                console.log("页面css文件已处理");
+                gulp.series(taskCss)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/js/*.js`).replace(/\\/gm, "/"), function (cb) {
+                console.log("页面js文件已处理");
+                gulp.series(taskJs)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/images/**/*`).replace(/\\/gm, "/"), function (cb) {
+                console.log("页面images文件已处理");
+                gulp.series(taskImage)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/public/fonts/**/*`).replace(/\\/gm, "/"), function (cb) {
+                console.log("fonts文件已处理");
+                gulp.series(taskPublicFonts)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/public/css/*.scss`).replace(/\\/gm, "/"), function (cb) {
+                console.log("公共css文件已处理");
+                gulp.series(taskPublicCss)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/public/js/*.js`).replace(/\\/gm, "/"), function (cb) {
+                console.log("公共js文件已处理");
+                gulp.series(taskPublicJs)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/public/images/**/**`).replace(/\\/gm, "/"), function (cb) {
+                console.log("公共image文件已处理");
+                gulp.series(taskPublicImage)();
+                browserSync.reload();
+                cb();
+            });
+            gulp.watch(path.normalize(`${envConfig.srcDir}/static/**/*`).replace(/\\/gm, "/"), function (cb) {
+                console.log("静态资源文件已处理");
+                gulp.series(taskStatic)();
+                browserSync.reload();
+                cb();
+            });
+        }
     });
 commander.program
     //

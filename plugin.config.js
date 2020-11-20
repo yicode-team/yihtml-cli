@@ -3,7 +3,7 @@ let path = require("path");
 let envConfig = require("./env.config.js");
 let commonParams = {
     // js压缩参数
-    uflifyParams: {
+    uflify: {
         compress: {
             drop_console: false,
             drop_debugger: false,
@@ -14,7 +14,10 @@ let commonParams = {
         },
     },
     // postcss参数
-    postcssParams: [],
+    postcss: [],
+    // 样式验证
+    stylelint: {},
+    // 响应式配置
     px2viewport: {
         unitToConvert: "px",
         viewportWidth: 750,
@@ -33,7 +36,7 @@ let commonParams = {
         landscapeWidth: 568,
     },
     // babel参数
-    babelParams: {
+    babel: {
         presets: [
             [
                 path.resolve(envConfig.cliDir, "node_modules", "@babel", "preset-env"),
@@ -57,13 +60,16 @@ let commonParams = {
         ],
     },
     // sass参数
-    sassParams: {
+    sass: {
         outputStyle: "expanded",
     },
-    // src参数
-    srcParams: {
-        allowEmpty: true,
+    gulp: {
+        // src参数
+        src: {
+            allowEmpty: true,
+        },
     },
+
     // html压缩参数
     yueHtmlMin: {
         // 区分大小写
@@ -80,20 +86,20 @@ let commonParams = {
     },
 };
 let buildParams = {
-    uflifyParams: {
+    uflify: {
         compress: {
-            drop_console: false,
+            drop_console: true,
             drop_debugger: true,
             conditionals: true,
         },
     },
     // sass参数
-    sassParams: {
+    sass: {
         outputStyle: "compressed",
     },
 };
 if (process.env.compress === "false") {
-    buildParams.sassParams.outputStyle = "expanded";
+    buildParams.sass.outputStyle = "expanded";
 }
 let devParams = {};
 if (process.env.NODE_ENV === "build") {
