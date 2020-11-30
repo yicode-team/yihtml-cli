@@ -76,10 +76,10 @@ function taskHtml() {
 function taskCss() {
     return gulp
         .src(`${envConfig.srcDir}/css/*.scss`, pluginConfig.gulp.src)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(gulpIf(process.env.NODE_ENV == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(gulpSass(pluginConfig.sass))
         .pipe(gulpPostcss(pluginConfig.postcss))
-        .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_ENV === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
         .pipe(gulp.dest(`${envConfig.distDir}/css`));
 }
 
@@ -87,28 +87,30 @@ function taskCss() {
 function taskJs() {
     return gulp
         .src(`${envConfig.srcDir}/js/*.js`)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
-        .pipe(gulpBabel(pluginConfig.babel))
+        .pipe(gulpIf(process.env.NODE_ENV == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(
-            through2.obj(function (file, enc, cb) {
-                browserify(file.path, {
-                    //
-                    basedir: envConfig.cliDir,
-                    paths: ["node_modules"],
-                    bundleExternal: true,
+            gulpIf(
+                process.env.NODE_NO_BABEL === "true",
+                through2.obj(function (file, enc, cb) {
+                    browserify(file.path, {
+                        //
+                        basedir: envConfig.cliDir,
+                        paths: ["node_modules"],
+                        bundleExternal: true,
+                    })
+                        .transform("babelify", pluginConfig.babel)
+                        .bundle((err, res) => {
+                            if (err) {
+                                console.log(err);
+                                return;
+                            }
+                            file.contents = res;
+                            cb(null, file);
+                        });
                 })
-                    .transform("babelify", pluginConfig.babel)
-                    .bundle((err, res) => {
-                        if (err) {
-                            console.log(err);
-                            return;
-                        }
-                        file.contents = res;
-                        cb(null, file);
-                    });
-            })
+            )
         )
-        .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_ENV === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
         .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflify)))
         .pipe(gulp.dest(`${envConfig.distDir}/js`));
 }
@@ -125,10 +127,10 @@ function taskPublicFonts() {
 function taskPublicCss() {
     return gulp
         .src(`${envConfig.srcDir}/public/css/*.scss`, pluginConfig.gulp.src)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(gulpIf(process.env.NODE_ENV == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(gulpSass(pluginConfig.sass))
         .pipe(gulpPostcss(pluginConfig.postcss))
-        .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_ENV === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
         .pipe(gulp.dest(`${envConfig.distDir}/public/css`));
 }
 
@@ -136,27 +138,30 @@ function taskPublicCss() {
 function taskPublicJs() {
     return gulp
         .src(`${envConfig.srcDir}/public/js/*.js`)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(gulpIf(process.env.NODE_ENV == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(
-            through2.obj(function (file, enc, cb) {
-                browserify(file.path, {
-                    //
-                    basedir: envConfig.cliDir,
-                    paths: ["node_modules"],
-                    bundleExternal: true,
+            gulpIf(
+                process.env.NODE_NO_BABEL === "true",
+                through2.obj(function (file, enc, cb) {
+                    browserify(file.path, {
+                        //
+                        basedir: envConfig.cliDir,
+                        paths: ["node_modules"],
+                        bundleExternal: true,
+                    })
+                        .transform("babelify", pluginConfig.babel)
+                        .bundle((err, res) => {
+                            if (err) {
+                                console.log(err);
+                                return;
+                            }
+                            file.contents = res;
+                            cb(null, file);
+                        });
                 })
-                    .transform("babelify", pluginConfig.babel)
-                    .bundle((err, res) => {
-                        if (err) {
-                            console.log(err);
-                            return;
-                        }
-                        file.contents = res;
-                        cb(null, file);
-                    });
-            })
+            )
         )
-        .pipe(gulpIf(process.env.NODE_ENV === "dev", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_ENV === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
         .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflify)))
         .pipe(gulp.dest(`${envConfig.distDir}/public/js`));
 }
@@ -294,8 +299,8 @@ commander.program
                 fs.outputFileSync(scssFilePath, scssFileData);
 
                 // 创建图片模流
-                let imageDirPath = path.resolve(envConfig.srcDir, "images", names.camelCaseName);
-                fs.ensureDirSync(imageDirPath);
+                // let imageDirPath = path.resolve(envConfig.srcDir, "images", names.camelCaseName);
+                // fs.ensureDirSync(imageDirPath);
 
                 console.log(`${cmd.page} 页面创建成功`);
             } catch (err) {
@@ -322,9 +327,9 @@ commander.program
                 // scss文件路径
                 let scssFilePath = path.resolve(envConfig.srcDir, "css", names.camelCaseName + ".scss");
                 fs.removeSync(scssFilePath);
-                // image目录路径
-                let imageDirPath = path.resolve(envConfig.srcDir, "images", names.camelCaseName);
-                fs.removeSync(imageDirPath);
+                // // image目录路径
+                // let imageDirPath = path.resolve(envConfig.srcDir, "images", names.camelCaseName);
+                // fs.removeSync(imageDirPath);
 
                 console.log(`${cmd.page} 页面删除成功`);
             } catch (err) {
@@ -350,13 +355,17 @@ commander.program
 commander.program
     //
     .command("dev")
-    .option("--lab", "开启实验打包")
+    .option("--lab", "开启实验打包", false)
+    .option("--no-babel", "是否开启babel转译", false)
+    .option("--no-map", "是否开启map文件", false)
     .description("启动开发环境")
     .action(async (cmd) => {
         shell.env["NODE_LAB"] = cmd.lab;
+        shell.env["NODE_NO_BABEL"] = cmd.babel;
+        shell.env["NODE_NO_MAP"] = cmd.map;
         shell.env["NODE_ENV"] = "dev";
         start();
-        if (cmd.lab === "false") {
+        if (cmd.lab === false) {
             gulp.watch(path.normalize(`${envConfig.srcDir}/*.html`).replace(/\\/gm, "/"), function (cb) {
                 console.log("页面html文件已处理");
                 gulp.series(taskHtml)();

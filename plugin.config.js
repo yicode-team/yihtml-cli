@@ -2,6 +2,9 @@ let _ = require("lodash");
 let path = require("path");
 let envConfig = require("./env.config.js");
 let commonParams = {
+    env: {
+        stylelint: true,
+    },
     // js压缩参数
     uflify: {
         compress: {
