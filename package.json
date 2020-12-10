@@ -1,6 +1,6 @@
 {
     "name": "yihtml-cli",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "description": "基于gulp的静态页面开发脚手架",
     "bin": {
         "yihtml-cli": "bin/yihtml-cli.js",
