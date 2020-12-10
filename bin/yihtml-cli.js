@@ -178,7 +178,9 @@ function taskStatic() {
 // 启动项目
 async function start() {
     try {
+        // 插件默认配置
         pluginConfig = require("../plugin.config.js");
+        // 用户自定义配置
         let yihtmlConfigPath = path.resolve(envConfig.rootDir, "yihtml.config.js");
         if (fs.pathExists(yihtmlConfigPath)) {
             let yihtmlConfigData = require(yihtmlConfigPath);
@@ -298,10 +300,6 @@ commander.program
                 let scssFileData = _.template(require("../template/scss.js"))(names);
                 fs.outputFileSync(scssFilePath, scssFileData);
 
-                // 创建图片模流
-                // let imageDirPath = path.resolve(envConfig.srcDir, "images", names.camelCaseName);
-                // fs.ensureDirSync(imageDirPath);
-
                 console.log(`${cmd.page} 页面创建成功`);
             } catch (err) {
                 console.log(`${cmd.page} 页面创建失败`);
@@ -327,9 +325,6 @@ commander.program
                 // scss文件路径
                 let scssFilePath = path.resolve(envConfig.srcDir, "css", names.camelCaseName + ".scss");
                 fs.removeSync(scssFilePath);
-                // // image目录路径
-                // let imageDirPath = path.resolve(envConfig.srcDir, "images", names.camelCaseName);
-                // fs.removeSync(imageDirPath);
 
                 console.log(`${cmd.page} 页面删除成功`);
             } catch (err) {

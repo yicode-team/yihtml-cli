@@ -1,1 +1,6 @@
-module.exports = "";
+module.exports = `
+let vm = new Vue({
+    el: "#app",
+    data: {},
+});
+`;
