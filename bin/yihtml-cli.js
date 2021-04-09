@@ -57,10 +57,14 @@ function taskHtml() {
         .pipe(
             through2.obj(function (file, _, cb) {
                 if (file.isBuffer()) {
-                    let fileData = file.contents.toString().replace(/<include.+src="(.+)".+\/>/gim, (match, p1) => {
+                    let fileData = file.contents.toString().replace(/<include.+src="(.+)".*?>([\S\s]*?)<\/include>/gim, (match, p1, p2) => {
                         let tplPath = path.resolve(envConfig.srcDir, p1);
                         if (fs.pathExistsSync(tplPath)) {
-                            return fs.readFileSync(tplPath);
+                            let fileSource = fs.readFileSync(tplPath).toString();
+                            let newFileSource = fileSource.replace("<slot></slot>", p2);
+                            return newFileSource;
+                        } else {
+                            return "";
                         }
                     });
                     file.contents = Buffer.from(fileData);
