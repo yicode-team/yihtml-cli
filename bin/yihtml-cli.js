@@ -26,7 +26,7 @@ let px2viewport = require("postcss-px-to-viewport");
 let through2 = require("through2");
 let browserify = require("browserify");
 
-gulpSass.compiler = require("node-sass");
+gulpSass.compiler = require("sass");
 
 // 获取不同格式的名称
 function getNames(name) {
@@ -76,10 +76,10 @@ function taskHtml() {
 function taskCss() {
     return gulp
         .src(`${envConfig.srcDir}/css/*.scss`, pluginConfig.gulp.src)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(gulpIf(process.env.NODE_MODE == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(gulpSass(pluginConfig.sass))
         .pipe(gulpPostcss(pluginConfig.postcss))
-        .pipe(gulpIf(process.env.NODE_ENV === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_MODE === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
         .pipe(gulp.dest(`${envConfig.distDir}/css`));
 }
 
@@ -87,7 +87,7 @@ function taskCss() {
 function taskJs() {
     return gulp
         .src(`${envConfig.srcDir}/js/*.js`)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(gulpIf(process.env.NODE_MODE == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(
             gulpIf(
                 process.env.NODE_NO_BABEL === "true",
@@ -110,8 +110,8 @@ function taskJs() {
                 })
             )
         )
-        .pipe(gulpIf(process.env.NODE_ENV === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
-        .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflify)))
+        .pipe(gulpIf(process.env.NODE_MODE === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_MODE === "build", gulpUglifyEs(pluginConfig.uflify)))
         .pipe(gulp.dest(`${envConfig.distDir}/js`));
 }
 
@@ -127,10 +127,10 @@ function taskPublicFonts() {
 function taskPublicCss() {
     return gulp
         .src(`${envConfig.srcDir}/public/css/*.scss`, pluginConfig.gulp.src)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(gulpIf(process.env.NODE_MODE == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(gulpSass(pluginConfig.sass))
         .pipe(gulpPostcss(pluginConfig.postcss))
-        .pipe(gulpIf(process.env.NODE_ENV === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_MODE === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
         .pipe(gulp.dest(`${envConfig.distDir}/public/css`));
 }
 
@@ -138,7 +138,7 @@ function taskPublicCss() {
 function taskPublicJs() {
     return gulp
         .src(`${envConfig.srcDir}/public/js/*.js`)
-        .pipe(gulpIf(process.env.NODE_ENV == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
+        .pipe(gulpIf(process.env.NODE_MODE == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(
             gulpIf(
                 process.env.NODE_NO_BABEL === "true",
@@ -161,8 +161,8 @@ function taskPublicJs() {
                 })
             )
         )
-        .pipe(gulpIf(process.env.NODE_ENV === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
-        .pipe(gulpIf(process.env.NODE_ENV === "build", gulpUglifyEs(pluginConfig.uflify)))
+        .pipe(gulpIf(process.env.NODE_MODE === "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.write("./maps")))
+        .pipe(gulpIf(process.env.NODE_MODE === "build", gulpUglifyEs(pluginConfig.uflify)))
         .pipe(gulp.dest(`${envConfig.distDir}/public/js`));
 }
 // 公共image任务
@@ -198,7 +198,7 @@ async function start() {
         }
 
         pluginConfig.postcss.push(autoprefixer());
-        if (process.env.NODE_ENV === "dev") {
+        if (process.env.NODE_MODE === "dev") {
             if (process.env.NODE_LAB === "true") {
                 console.log("实验环境打包中");
             } else {
@@ -223,7 +223,7 @@ async function start() {
                 taskStatic
             ),
             function () {
-                if (process.env.NODE_ENV === "dev") {
+                if (process.env.NODE_MODE === "dev") {
                     if (process.env.NODE_LAB === "true") {
                         console.log("实验环境打包完毕");
                     } else {
@@ -236,7 +236,7 @@ async function start() {
                         console.log("开发环境启动完毕");
                     }
                 }
-                if (process.env.NODE_ENV === "build") {
+                if (process.env.NODE_MODE === "build") {
                     console.log("发布环境资源打包完毕");
                 }
             }
@@ -344,7 +344,7 @@ commander.program
     .command("build")
     .description("发布环境打包")
     .action(async (cmd) => {
-        shell.env["NODE_ENV"] = "build";
+        shell.env["NODE_MODE"] = "build";
         start();
     });
 commander.program
@@ -358,7 +358,7 @@ commander.program
         shell.env["NODE_LAB"] = cmd.lab;
         shell.env["NODE_NO_BABEL"] = cmd.babel;
         shell.env["NODE_NO_MAP"] = cmd.map;
-        shell.env["NODE_ENV"] = "dev";
+        shell.env["NODE_MODE"] = "dev";
         start();
         if (cmd.lab === false) {
             gulp.watch(path.normalize(`${envConfig.srcDir}/*.html`).replace(/\\/gm, "/"), function (cb) {

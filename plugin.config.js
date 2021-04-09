@@ -105,10 +105,10 @@ if (process.env.compress === "false") {
     buildParams.sass.outputStyle = "expanded";
 }
 let devParams = {};
-if (process.env.NODE_ENV === "build") {
+if (process.env.NODE_MODE === "build") {
     commonParams = _.merge(commonParams, buildParams);
 }
-if (process.env.NODE_ENV === "dev") {
+if (process.env.NODE_MODE === "dev") {
     commonParams = _.merge(commonParams, devParams);
 }
 
