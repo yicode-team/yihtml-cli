@@ -290,17 +290,17 @@ commander.program
                 let names = getNames(cmd.page);
 
                 // 创建html
-                let htmlFilePath = path.resolve(envConfig.srcDir, names.camelCaseName + ".html");
+                let htmlFilePath = path.resolve(envConfig.srcDir, names.kebabCaseName + ".html");
                 let htmlFileData = _.template(require("../template/html.js"))(names);
                 fs.outputFileSync(htmlFilePath, htmlFileData);
 
                 // 创建js
-                let jsFilePath = path.resolve(envConfig.srcDir, "js", names.camelCaseName + ".js");
+                let jsFilePath = path.resolve(envConfig.srcDir, "js", names.kebabCaseName + ".js");
                 let jsFileData = _.template(require("../template/js.js"))(names);
                 fs.outputFileSync(jsFilePath, jsFileData);
 
                 // 创建scss
-                let scssFilePath = path.resolve(envConfig.srcDir, "css", names.camelCaseName + ".scss");
+                let scssFilePath = path.resolve(envConfig.srcDir, "css", names.kebabCaseName + ".scss");
                 let scssFileData = _.template(require("../template/scss.js"))(names);
                 fs.outputFileSync(scssFilePath, scssFileData);
 
