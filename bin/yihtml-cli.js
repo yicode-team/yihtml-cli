@@ -2,6 +2,7 @@
 "use strict";
 let _ = require("lodash");
 let path = require("path");
+let fs = require("fs-extra");
 // 插件配置
 let pluginConfig = {};
 // 环境变量配置
@@ -11,12 +12,11 @@ let pkg = require("../package.json");
 let del = require("del");
 let gulp = require("gulp");
 let gulpSourcemaps = require("gulp-sourcemaps");
-let gulpSass = require("gulp-sass");
+let gulpSass = require("gulp-sass")(require("sass"));
 let gulpPostcss = require("gulp-postcss");
 let gulpIf = require("gulp-if");
 let autoprefixer = require("autoprefixer");
-let fs = require("fs-extra");
-let download = require("download-git-repo");
+let download = require("nodejs-file-downloader");
 let gulpBabel = require("gulp-babel");
 let gulpUglifyEs = require("gulp-uglify-es").default;
 let shell = require("shelljs");
@@ -25,8 +25,14 @@ let browserSync = require("browser-sync").create("yihtml");
 let px2viewport = require("postcss-px-to-viewport");
 let through2 = require("through2");
 let browserify = require("browserify");
+let ora = require("ora");
 
-gulpSass.compiler = require("sass");
+let projectItem = {
+    url: "https://static.chensuiyi.com/download/yihtml-template.zip",
+    filename: "yihtml-template.zip",
+};
+
+// gulpSass.compiler = require("sass");
 
 // 获取不同格式的名称
 function getNames(name) {
@@ -57,7 +63,7 @@ function taskHtml() {
         .pipe(
             through2.obj(function (file, _, cb) {
                 if (file.isBuffer()) {
-                    let fileData = file.contents.toString().replace(/<include.+src="(.+)".*?>([\S\s]*?)<\/include>/gim, (match, p1, p2) => {
+                    let fileData = file.contents.toString().replace(/<include.+src="(.+)".*?\/?>([\S\s]*?)(<\/include>)?/gim, (match, p1, p2) => {
                         let tplPath = path.resolve(envConfig.srcDir, p1);
                         if (fs.pathExistsSync(tplPath)) {
                             let fileSource = fs.readFileSync(tplPath).toString();
@@ -76,10 +82,11 @@ function taskHtml() {
         .pipe(gulp.dest(envConfig.distDir));
     return _;
 }
+
 // css任务
 function taskCss() {
     return gulp
-        .src(`${envConfig.srcDir}/css/*.scss`, pluginConfig.gulp.src)
+        .src(`${envConfig.srcDir}/scss/**/*.scss`, pluginConfig.gulp.src)
         .pipe(gulpIf(process.env.NODE_MODE == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(gulpSass(pluginConfig.sass))
         .pipe(gulpPostcss(pluginConfig.postcss))
@@ -130,7 +137,7 @@ function taskPublicFonts() {
 // 公共css任务
 function taskPublicCss() {
     return gulp
-        .src(`${envConfig.srcDir}/public/css/*.scss`, pluginConfig.gulp.src)
+        .src(`${envConfig.srcDir}/public/scss/**/*.scss`, pluginConfig.gulp.src)
         .pipe(gulpIf(process.env.NODE_MODE == "dev" && process.env.NODE_NO_MAP !== "false", gulpSourcemaps.init({ largeFile: true })))
         .pipe(gulpSass(pluginConfig.sass))
         .pipe(gulpPostcss(pluginConfig.postcss))
@@ -169,6 +176,7 @@ function taskPublicJs() {
         .pipe(gulpIf(process.env.NODE_MODE === "build", gulpUglifyEs(pluginConfig.uflify)))
         .pipe(gulp.dest(`${envConfig.distDir}/public/js`));
 }
+
 // 公共image任务
 function taskPublicImage() {
     return gulp.src(`${envConfig.srcDir}/public/images/**/*`).pipe(gulp.dest(`${envConfig.distDir}/public/images`));
@@ -193,9 +201,9 @@ async function start() {
             }
         }
         // 添加postCss插件
-        if (pluginConfig.env.stylelint === true) {
-            pluginConfig.postcss.push(stylelint(pluginConfig.stylelint));
-        }
+        // if (pluginConfig.env.stylelint === true) {
+        //     pluginConfig.postcss.push(stylelint(pluginConfig.stylelint));
+        // }
 
         if (pluginConfig.px2viewport.enable !== false) {
             pluginConfig.postcss.push(px2viewport(pluginConfig.px2viewport));
@@ -227,48 +235,75 @@ async function start() {
                 taskStatic
             ),
             function () {
-                if (process.env.NODE_MODE === "dev") {
-                    if (process.env.NODE_LAB === "true") {
-                        console.log("实验环境打包完毕");
-                    } else {
-                        browserSync.init({
-                            server: {
-                                baseDir: path.resolve(envConfig.distDir),
-                            },
-                            open: false,
-                        });
-                        console.log("开发环境启动完毕");
+                try {
+                    if (process.env.NODE_MODE === "dev") {
+                        if (process.env.NODE_LAB === "true") {
+                            console.log("实验环境打包完毕");
+                        } else {
+                            browserSync.init({
+                                server: {
+                                    baseDir: path.resolve(envConfig.distDir),
+                                },
+                                open: false,
+                            });
+                            console.log("开发环境启动完毕");
+                        }
                     }
-                }
-                if (process.env.NODE_MODE === "build") {
-                    console.log("发布环境资源打包完毕");
+                    if (process.env.NODE_MODE === "build") {
+                        console.log("发布环境资源打包完毕");
+                    }
+                } catch (err) {
+                    console.log("🚀 ~ file: yihtml-cli.js ~ line 258 ~ start ~ err", err);
                 }
             }
         )();
     } catch (err) {
-        console.log("err");
-        console.log(err);
+        console.log("🚀 ~ file: yihtml-cli.js ~ line 257 ~ start ~ err", err);
     }
 }
+
 // 下载项目
-async function downloadProject() {
-    return new Promise((resolve, reject) => {
-        download("https://gitee.com:banshiweichen/yihtml-template#master", envConfig.tempDir, { clone: true }, function (err) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
+function downloadProject(options) {
+    const spinner = ora("Loading unicorns").start("模板下载中");
+    return new Promise(async (resolve, reject) => {
+        try {
+            const downloader = new Downloader({
+                url: options.url,
+                directory: envConfig.tempDir,
+                fileName: options.filename,
+                cloneFiles: false,
+                maxAttempts: 3,
+                onProgress: function (percentage, chunk, remainingSize) {
+                    if (remainingSize === 0) {
+                        spinner.succeed("下载成功");
+                    }
+                },
+            });
+            let res = await downloader.download();
+            resolve(res);
+        } catch (err) {
+            spinner.fail("下载失败");
+            reject(err);
+        }
     });
 }
+
 // 初始化项目
 async function init() {
     try {
         console.log("yihtml-template模板下载中...");
         fs.removeSync(envConfig.tempDir);
         fs.ensureDirSync(envConfig.tempDir);
-        await downloadProject();
+        await downloadProject({
+            url: projectItem.url,
+            filename: projectItem.filename,
+        });
+
+        // 创建zip压缩实例
+        let zip = new AdmZip(path.resolve(envConfig.tempDir, projectItem.filename));
+        await zip.extractAllTo(tempDir, true);
+        await fs.removeSync(path.join(tempDir, projectItem.filename));
+        await fs.copySync(tempDir, rootDir);
         fs.copySync(envConfig.tempDir, envConfig.rootDir, { overwrite: true });
         fs.removeSync(envConfig.tempDir);
         console.log("yihtml-template模板下载成功");
@@ -311,6 +346,7 @@ commander.program
             }
         }
     });
+
 commander.program
     //
     .command("del")
@@ -336,6 +372,7 @@ commander.program
             }
         }
     });
+
 commander.program
     //
     .command("init")
@@ -343,6 +380,7 @@ commander.program
     .action(async (source) => {
         await init();
     });
+
 commander.program
     //
     .command("build")
@@ -351,6 +389,7 @@ commander.program
         shell.env["NODE_MODE"] = "build";
         start();
     });
+
 commander.program
     //
     .command("dev")
@@ -377,7 +416,7 @@ commander.program
                 browserSync.reload();
                 cb();
             });
-            gulp.watch(path.normalize(`${envConfig.srcDir}/css/*.scss`).replace(/\\/gm, "/"), function (cb) {
+            gulp.watch(path.normalize(`${envConfig.srcDir}/scss/**/*.scss`).replace(/\\/gm, "/"), function (cb) {
                 console.log("页面css文件已处理");
                 gulp.series(taskCss)();
                 browserSync.reload();
@@ -401,7 +440,7 @@ commander.program
                 browserSync.reload();
                 cb();
             });
-            gulp.watch(path.normalize(`${envConfig.srcDir}/public/css/*.scss`).replace(/\\/gm, "/"), function (cb) {
+            gulp.watch(path.normalize(`${envConfig.srcDir}/public/scss/**/*.scss`).replace(/\\/gm, "/"), function (cb) {
                 console.log("公共css文件已处理");
                 gulp.series(taskPublicCss)();
                 browserSync.reload();
@@ -413,7 +452,7 @@ commander.program
                 browserSync.reload();
                 cb();
             });
-            gulp.watch(path.normalize(`${envConfig.srcDir}/public/images/**/**`).replace(/\\/gm, "/"), function (cb) {
+            gulp.watch(path.normalize(`${envConfig.srcDir}/public/images/**/*`).replace(/\\/gm, "/"), function (cb) {
                 console.log("公共image文件已处理");
                 gulp.series(taskPublicImage)();
                 browserSync.reload();
@@ -427,11 +466,13 @@ commander.program
             });
         }
     });
+
 commander.program
     //
     .version(pkg.version, "-v, --version", "显示yihtml版本")
     .helpOption("-h, --help", "显示帮助信息")
     .helpInformation();
+
 commander.program
     //
     .parse(process.argv);
