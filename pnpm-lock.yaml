@@ -24,7 +24,7 @@ specifiers:
   gulp-htmlhint: ^4.0.2
   gulp-if: ^3.0.0
   gulp-include: ^2.4.1
-  gulp-postcss: ^9.0.1
+  gulp-postcss: ^9
   gulp-rename: ^2.0.0
   gulp-rollup: ^2.17.0
   gulp-sass: ^5.1.0
@@ -33,6 +33,7 @@ specifiers:
   lodash: ^4.17.21
   nodejs-file-downloader: ^4.9.3
   ora: ^5
+  postcss: ^8.4.14
   postcss-px-to-viewport: ^1.1.1
   release-it: ^15.1.0
   rollup: ^2.75.7
@@ -49,7 +50,7 @@ dependencies:
   '@babel/runtime-corejs3': 7.18.3
   '@rollup/plugin-commonjs': 22.0.1_rollup@2.75.7
   '@rollup/plugin-node-resolve': 13.3.0_rollup@2.75.7
-  autoprefixer: 10.4.7
+  autoprefixer: 10.4.7_postcss@8.4.14
   babelify: 10.0.0_@babel+core@7.18.5
   browser-sync: 2.27.10
   browserify: 17.0.0
@@ -65,7 +66,7 @@ dependencies:
   gulp-htmlhint: 4.0.2
   gulp-if: 3.0.0
   gulp-include: 2.4.1
-  gulp-postcss: 9.0.1
+  gulp-postcss: 9.0.1_postcss@8.4.14
   gulp-rename: 2.0.0
   gulp-rollup: 2.17.0
   gulp-sass: 5.1.0
@@ -74,6 +75,7 @@ dependencies:
   lodash: 4.17.21
   nodejs-file-downloader: 4.9.3
   ora: 5.4.1
+  postcss: 8.4.14
   postcss-px-to-viewport: 1.1.1
   release-it: 15.1.0
   rollup: 2.75.7
@@ -2002,7 +2004,7 @@ packages:
     hasBin: true
     dev: false
 
-  /autoprefixer/10.4.7:
+  /autoprefixer/10.4.7_postcss@8.4.14:
     resolution: {integrity: sha512-ypHju4Y2Oav95SipEcCcI5J7CGPuvz8oat7sUtYj3ClK44bldfvtvcxK6IEK++7rqB7YchDGzweZIBG+SD0ZAA==}
     engines: {node: ^10 || ^12 || >=14}
     hasBin: true
@@ -2014,6 +2016,7 @@ packages:
       fraction.js: 4.2.0
       normalize-range: 0.1.2
       picocolors: 1.0.0
+      postcss: 8.4.14
       postcss-value-parser: 4.2.0
     dev: false
 
@@ -4687,7 +4690,7 @@ packages:
       minimatch: 3.1.2
     dev: false
 
-  /gulp-postcss/9.0.1:
+  /gulp-postcss/9.0.1_postcss@8.4.14:
     resolution: {integrity: sha512-9QUHam5JyXwGUxaaMvoFQVT44tohpEFpM8xBdPfdwTYGM0AItS1iTQz0MpsF8Jroh7GF5Jt2GVPaYgvy8qD2Fw==}
     engines: {node: ^10 || ^12 || >=14}
     peerDependencies:
@@ -4695,7 +4698,8 @@ packages:
     dependencies:
       fancy-log: 1.3.3
       plugin-error: 1.0.1
-      postcss-load-config: 3.1.4
+      postcss: 8.4.14
+      postcss-load-config: 3.1.4_postcss@8.4.14
       vinyl-sourcemaps-apply: 0.2.1
     transitivePeerDependencies:
       - ts-node
@@ -6920,7 +6924,7 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /postcss-load-config/3.1.4:
+  /postcss-load-config/3.1.4_postcss@8.4.14:
     resolution: {integrity: sha512-6DiM4E7v4coTE4uzA8U//WhtPwyhiim3eyjEMFCnUpzbrkK9wJHgKDT2mR+HbtSrd/NubVaYTOpSpjUl8NQeRg==}
     engines: {node: '>= 10'}
     peerDependencies:
@@ -6933,6 +6937,7 @@ packages:
         optional: true
     dependencies:
       lilconfig: 2.0.5
+      postcss: 8.4.14
       yaml: 1.10.2
     dev: false
 
