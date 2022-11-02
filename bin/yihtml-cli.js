@@ -16,7 +16,9 @@ let gulpSass = require("gulp-sass")(require("sass"));
 let gulpPostcss = require("gulp-postcss");
 let gulpIf = require("gulp-if");
 let autoprefixer = require("autoprefixer");
-let download = require("nodejs-file-downloader");
+let Downloader = require("nodejs-file-downloader");
+let AdmZip = require("adm-zip");
+
 let gulpBabel = require("gulp-babel");
 let gulpUglifyEs = require("gulp-uglify-es").default;
 let shell = require("shelljs");
@@ -301,9 +303,9 @@ async function init() {
 
         // 创建zip压缩实例
         let zip = new AdmZip(path.resolve(envConfig.tempDir, projectItem.filename));
-        await zip.extractAllTo(tempDir, true);
-        await fs.removeSync(path.join(tempDir, projectItem.filename));
-        await fs.copySync(tempDir, rootDir);
+        await zip.extractAllTo(envConfig.tempDir, true);
+        await fs.removeSync(path.join(envConfig.tempDir, projectItem.filename));
+        await fs.copySync(envConfig.tempDir, envConfig.rootDir);
         fs.copySync(envConfig.tempDir, envConfig.rootDir, { overwrite: true });
         fs.removeSync(envConfig.tempDir);
         console.log("yihtml-template模板下载成功");

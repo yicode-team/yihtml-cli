@@ -7,6 +7,7 @@ specifiers:
   '@babel/runtime': ^7.20.1
   '@babel/runtime-corejs3': ^7.20.1
   '@yicode/commander': ^10.0.3
+  adm-zip: ^0.5.9
   autoprefixer: ^10.4.13
   babelify: ^10.0.0
   browser-sync: ^2.27.10
@@ -45,6 +46,7 @@ dependencies:
   '@babel/runtime': 7.20.1
   '@babel/runtime-corejs3': 7.20.1
   '@yicode/commander': 10.0.3
+  adm-zip: 0.5.9
   autoprefixer: 10.4.13_postcss@8.4.18
   babelify: 10.0.0_@babel+core@7.19.6
   browser-sync: 2.27.10
@@ -1601,6 +1603,11 @@ packages:
     resolution: {integrity: sha512-7zFpHzhnqYKrkYdUjF1HI1bzd0VygEGX8lFk4k5zVMqHEoES+P+7TKI+EvLO9WVMJ8eekdO0aDEK044xTXwPPA==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+    dev: false
+
+  /adm-zip/0.5.9:
+    resolution: {integrity: sha512-s+3fXLkeeLjZ2kLjCBwQufpI5fuN+kIGBxu6530nVQZGVol0d7Y/M88/xw9HGGUcJjKf8LutN3VPRUBq6N7Ajg==}
+    engines: {node: '>=6.0'}
     dev: false
 
   /agent-base/6.0.2:
